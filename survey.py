@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium_stealth import stealth
 
 import bs4
 from bs4 import BeautifulSoup as soup
@@ -13,6 +14,7 @@ import requests
 import re
 import time
 import random
+import builtins
 
 #/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --no-first-run --no-default-browser-check
 #Update the chromedriver i have
@@ -41,8 +43,8 @@ def getBasics(tag):
             'school': ['bachelor', 'ba', 'collegedegree', 'bachelorsdegree'],
             'degree': ['bachelor', 'ba', 'collegedegree', 'bachelorsdegree'],
             'employment': ['fulltime'],
-            'race': ['black'],
-            'ethnicity': ['black'],
+            'race': ['black', 'africanamericanblack'],
+            'ethnicity': ['black', 'africanamericanblack'],
             'hispanic': ['no'],
             'sexual': ['straight', ' heterosexual'],
             'vehicle': ['2015'],
@@ -86,6 +88,32 @@ def answerOfBasics(element, types):
             except Exception:
                 pass
     return None
+def answerOfOptions(elements, types):
+    element = elements[0].parent.parent
+    parent = element
+    childOfParent = elements
+    if type(list(types)[0]) == str:
+        try:
+            listOfElements = textInChildren('nope', childOfParent, types)
+            if listOfElements:
+                return True
+        except Exception:
+            pass
+    else:
+        for j in types:
+            try:
+                if j[0] in element.text.lower(): 
+                    for x in range(1,len(j)):
+                        try:
+                            if j[x] in element.text.lower():
+                                listOfElements = textInChildren('nope', childOfParent, j[x])
+                                if listOfElements:
+                                    return True
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+    return None
 def clickAll(parent, elements):
     validList = ['div', 'option', 'input', 'button']
     sorted = [x for x in elements if x.name in validList]
@@ -102,13 +130,26 @@ def clickAll(parent, elements):
 def textInChildren(parent, elements, key):
     validList = ['div', 'option', 'input', 'button']
     sorted = [x for x in elements if x.name in validList]
-    good = False
     goodBoys = []
-    for i in sorted:
-        go = re.sub('[^A-Za-z0-9]+', '', i.getText().lower())
-        if go == key:
-            goodBoys.append(i)
-    return clickAll(parent, goodBoys)
+    if parent == 'nope':
+        for i in sorted:
+            two = i.findNextSibling() if i.findNextSibling() != None else i.findChild()
+            three = i.findPreviousSibling() if i.findPreviousSibling() != None else i.parent
+            for j in [i, two, three]:
+                go = re.sub('[^A-Za-z0-9]+', '', j.getText().lower())
+                if go in key:
+                    goodBoys.append(i)
+        return clickAll(parent, goodBoys)
+    else:
+        for i in sorted:
+            go = re.sub('[^A-Za-z0-9]+', '', i.getText().lower())
+            if go == key:
+                if i.name == 'span':
+                    value = i.findPreviousSibling()
+                    goodBoys.append(value)
+                else:
+                    goodBoys.append(i)
+        return clickAll(parent, goodBoys)
 
 def getQuestionType(quest, type):
     #call APi if need be
@@ -442,14 +483,23 @@ def answer():
     global question_container
 
     options = Options()
-    #url = 'https://surveymyopinion.researchnow.com/survey/standalone?id=05fa40c1-3f5f-453e-a6de-13fea7720b20'
-    url = 'https://dkr1.ssisurveys.com/projects/estart?ekey=RwqiqMmC2faoI7gqezAr5w**&GID=6000446&sname=0y-fxX4umTymepORtzNfTXz2kQY'
-    # url = 'https://survey.alchemer.com/s3/6953135/HRB-CT-Survey-2022-Restructures?respondent=6514c15a-9755-a189-2d3a-f53f3ac84ebc'
-    #url = 'https://edgesurvey.innovatemr.net/#/survey/age?survNum=vzdQ7N36&supCode=654&PID=2107-ALd-umrf9-xioe3-pasfuf_-202201&Lang=english&langCode=EN&jb_id=8436148&chkOeValid=1&oeQuestionIds=8878&AGE=ageval&GENDER=genderval&REGION=regionval&cntryCode=US&supId=QLB&RAIJuris=false&uid=rEB2G4G4k7ijJrEJnyD4uoeDZRJK1GTqpEWnKor&isp=1&start=1&isQuestionsExists=1'
-    #options.add_experimental_option("debuggerAddress","lcalhost:9222")
+    options.add_argument("start-maximized")
+    # Chrome is controlled by automated test software
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    url = 'https://www.surveyjunkie.com/member'
     options.add_experimental_option("detach", True)
+    #options.add_experimental_option("debuggerAddress","lcalhost:9222")
     #options.add_experimental_option("prefs",{'profile.managed_default_content_settings.javascript':2})
     driver = webdriver.Chrome(executable_path="/Users/joshuabarnett/.wdm/drivers/chromedriver", options = options)
+    stealth(driver,
+      languages=["en-US", "en"],
+      vendor="Google Inc.",
+      platform="Win32",
+      webgl_vendor="Intel Inc.",
+      renderer="Intel Iris OpenGL Engine",
+      fix_hairline=True,
+    )
     # chrome_prefs = {}
     # options.experimental_options["prefs"] = chrome_prefs
     # chrome_prefs["profile.default_content_settings"] = {"javascript": 2}
@@ -460,7 +510,8 @@ def answer():
     WebDriverWait(driver, 1)
      # noCss = 'document.querySelectorAll(\'style,link[rel=\"stylesheet\"]\').forEach(item => item.remove());
     # noCss = 'nodeList = document.querySelectorAll("*");\nfor (let i = 0; i < nodeList.length; i++){\n  blow = nodeList[i].style; blow.setProperty(\'text-transform\',\'lowercase\');\n}'
-    # driver.execute_script(noCss)
+    selfDie = 'lins = document.querySelectorAll(\'a\')\nvalues = []\nfor (i = 0; i < lins.length; i++) {\n  avalue = lins[i]\nif (avalue.className.includes(\'survey\')) {\n  avalue.setAttribute(\'target\', \'_self\')\n}\n}'
+    driver.execute_script(selfDie)
 
     #birth = driver.find_element_by_tag_name('select').click()
     find_ids = ''
@@ -468,7 +519,10 @@ def answer():
     soup_object = soup(html, features="html.parser")
     go = True
     while go:
+        builtins.input()
         print(driver.current_url)
+        if 'junkie' in driver.current_url:
+            driver.execute_script(selfDie)
         if url != driver.current_url:
             url = driver.current_url
             html = driver.page_source
@@ -566,7 +620,7 @@ def answer():
                                     if workingKey != False:
                                         workingKey = True
                                 else:
-                                    answer = answerOfBasics(liInputs, answersToQuestions)
+                                    answer = answerOfBasics(listElements[i], answersToQuestions)
                                     if answer == None:
                                         answer = getOptions(listOfOptions, len(listOfOptions))
                                         tryClicking(answer)
@@ -622,7 +676,7 @@ def answer():
                                         if workingKey != False:
                                             workingKey = True
                                     else:
-                                        answer = answerOfBasics(inputs_update, answersToQuestions)
+                                        answer = answerOfBasics(tables[i], answersToQuestions)
                                         if answer == None:
                                             answer = getOptions(listOfOptions, len(listOfOptions))
                                             tryClicking(answer)
@@ -656,7 +710,7 @@ def answer():
                                     if workingKey != False:
                                         workingKey = True
                                 else:
-                                    answer = answerOfBasics(inputs_update, answersToQuestions)
+                                    answer = answerOfOptions(inputs_update, answersToQuestions)
                                     if answer == None:
                                         answer = getOptions(inputs_update, len(inputs_update))
                                         tryClicking(answer)
