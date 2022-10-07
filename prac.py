@@ -1,5 +1,7 @@
 jo = [1,2]
 bo = [3,1,4,5]
+go = 'oiu'
+lo = 'oiu'
 #jo += [x for x in bo if x in jo]
 for i in jo:
     print(i)
@@ -7,4 +9,5 @@ for i in jo:
         jo += [x for x in bo if x in jo]
 if len([x for x in jo if x in bo]) == 0:
     print('yeah')
-jo = input()
+
+print(go==lo)
