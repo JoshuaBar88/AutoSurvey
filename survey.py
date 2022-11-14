@@ -177,14 +177,21 @@ def noDuplicate(objects):
     
 
 def getOptions(objects, length):
+    forbiddenWords = ['other', 'prefer', 'option']
+    goodToGo = [False]
     if length <= 2:
-        return objects[0]
-    number = random.randint(0, length - 1)
-    try:
-        while len(objects[number].attrs['value']) < 1:
-            number = random.randint(0, length - 1)
-    except:
-        pass
+        return objects[0]    
+    while False in goodToGo:
+        goodToGo = []
+        number = random.randint(0, length - 1)
+        for i in forbiddenWords:
+            try:
+                while len(objects[number].attrs['value']) < 1:
+                    number = random.randint(0, length - 1)
+            except:
+                pass
+            if i in objects[number].text.lower():
+                goodToGo.append(False)
     return objects[number]
 def populateInput(element, types):
     keys = element.attrs
@@ -432,13 +439,9 @@ def getNumberOfQuestion(elementList, questions, next_page):
     holder = []
     finale['only_inputs'] = {}
     finale['only_inputs']['questions'] = {}
-    leftover = questions
+    leftover = questions.copy()
     matta_inputs = elementList['only_inputs']
     for quest in questions:
-        listElements = [x for x in quest.find_all('ul') if 'hidden' not in x.attrs.keys() and 'hidden' not in x.attrs.values()] + [x for x in quest.find_all('ol') if 'hidden' not in x.attrs.keys() and 'hidden' not in x.attrs.values()]
-        selection = [x for x in quest.find_all('select') if 'hidden' not in x.attrs.keys() and 'hidden' not in x.attrs.values()]
-        tables = [x for x in quest.find_all('table') if 'hidden' not in x.attrs.keys() and 'hidden' not in x.attrs.values()]
-        textarea = [x for x in quest.find_all('textarea') if 'hidden' not in x.attrs.keys() and 'hidden' not in x.attrs.values()]
         only_inputs = [x for x in quest.find_all('input') if 'hidden' not in x.attrs.keys() and 'hidden' not in x.attrs.values() and x not in next_page]
         indexOfText = [value for value in only_inputs if value.attrs['type'].lower() == 'number' or value.attrs['type'].lower() == 'string' or value.attrs['type'].lower() == 'text']
         if len(only_inputs) > 0:
@@ -446,64 +449,52 @@ def getNumberOfQuestion(elementList, questions, next_page):
                 if getBasics([quest]):
                     finale['only_inputs']['questions'][(quest,)] = only_inputs
                     leftover.pop(leftover.index(quest))
+                    for inputs in only_inputs:
+                        matta_inputs.remove(inputs)
             else:
                 finale['only_inputs']['questions'][(quest,)] = only_inputs
                 leftover.pop(leftover.index(quest))
-        dictHolder = {len(listElements): ['listElements',listElements], len(selection): ['selection',selection], len(tables): ['tables',tables], len(textarea): ['textarea',textarea] }
-        lengthChecker = [len(listElements), len(selection), len(tables), len(textarea)]
-        if len(set(lengthChecker)) == 2:
-            leftover.pop(leftover.index(quest))
-            checkingForOneZero = list(set(lengthChecker))
-            key = checkingForOneZero[0] if checkingForOneZero[0]!=0 else checkingForOneZero[1]
-            value = dictHolder[key][0]
-            finale[value] = {}
-            finale[value]['questions'] = {}
-            finale[value]['questions'][(quest,)] = dictHolder[key][1]
+                for inputs in only_inputs:
+                    matta_inputs.remove(inputs)
 
-    for i,j in elementList.items():
-        if i not in (list(finale.keys())) or (i == 'only_inputs' and len(matta_inputs) > 0):
-            if i != 'only_inputs':
-                finale[i] = {}
-                finale[i]['questions'] = {}
-            else:
-                j = matta_inputs
-            for ele in j:
-                out = False
-                for x in leftover:
-                    if out == True:
-                        break                 
-                    if len(holder) == 0:
-                        quest = x.findParents()
-                        answer = ele.findParents()
-                        allTheParentCheck = set(quest+answer)
-                        checker = {'quest': len(quest)} if len(quest) > len(answer) else {'answer': len(answer)}
-                        if len(allTheParentCheck) == list(checker.values())[0]:
-                            if 'quest' in checker.keys():
-                                for y in answer:
-                                    if out == True:
-                                        break
-                                    for z in quest:
-                                        if y == z:
-                                            if (y,) not in list(finale[i]['questions'].keys()):
-                                                finale[i]['questions'][(y,)] = []
-                                                finale[i]['questions'][(y,)].append(ele)
-                                            else:
-                                                finale[i]['questions'][(y,)].append(ele)
-                                            out = True
-                                            break
-                            else:
-                                for y in quest:
-                                    if out == True:
-                                        break                                
-                                    for z in answer:
-                                        if y == z:
-                                            if (y,) not in list(finale[i]['questions'].keys()):
-                                                finale[i]['questions'][(y,)] = []
-                                                finale[i]['questions'][(y,)].append(ele)
-                                            else:
-                                                finale[i]['questions'][(y,)].append(ele)
-                                            out = True
-                                            break                          
+
+    for ele in matta_inputs:
+        out = False
+        for x in leftover:
+            if out == True:
+                break                 
+            if len(holder) == 0:
+                quest = x.findParents()
+                answer = ele.findParents()
+                allTheParentCheck = set(quest+answer)
+                checker = {'quest': len(quest)} if len(quest) > len(answer) else {'answer': len(answer)}
+                if len(allTheParentCheck) == list(checker.values())[0]:
+                    if 'quest' in checker.keys():
+                        for y in answer:
+                            if out == True:
+                                break
+                            for z in quest:
+                                if y == z:
+                                    if (y,) not in list(finale['only_inputs']['questions'].keys()):
+                                        finale['only_inputs']['questions'][(y,)] = []
+                                        finale['only_inputs']['questions'][(y,)].append(ele)
+                                    else:
+                                        finale['only_inputs']['questions'][(y,)].append(ele)
+                                    out = True
+                                    break
+                    else:
+                        for y in quest:
+                            if out == True:
+                                break                                
+                            for z in answer:
+                                if y == z:
+                                    if (y,) not in list(finale['only_inputs']['questions'].keys()):
+                                        finale['only_inputs']['questions'][(y,)] = []
+                                        finale['only_inputs']['questions'][(y,)].append(ele)
+                                    else:
+                                        finale['only_inputs']['questions'][(y,)].append(ele)
+                                    out = True
+                                    break                          
 
     return finale
 def tryClickingSelect(element, answer):
@@ -529,6 +520,16 @@ def removeChildren(elements):
                 index.append(elements.index(child))
     final = [i for j, i in enumerate(elements) if j not in index]
     return final
+
+def findSenpai(child):
+    parent = child.parent
+    sibling =  child.findPreviousSiblings()
+    value = getBasics(sibling+[parent])
+    while len(value) == 0 or parent.name == 'html':
+        parent = parent.parent
+        sibling =  parent.findPreviousSiblings()
+        value = getBasics(sibling+[parent])
+    return value, parent
 
 
 
@@ -563,15 +564,14 @@ def answer():
     driver = webdriver.Chrome(executable_path="/Users/joshuabarnett/.wdm/drivers/chromedriver", options = options)
     #driver = uc.Chrome(options=options)
     #driver.maximize_window()
-    #driver.execute_script('return navigator.webdriver')
-    # stealth(driver,
-    #   languages=["en-US", "en"],
-    #   vendor="Google Inc.",
-    #   platform="Win32",
-    #   webgl_vendor="Intel Inc.",
-    #   renderer="Intel Iris OpenGL Engine",
-    #   fix_hairline=True,
-    # )
+    stealth(driver,
+      languages=["en-US", "en"],
+      vendor="Google Inc.",
+      platform="Win32",
+      webgl_vendor="Intel Inc.",
+      renderer="Intel Iris OpenGL Engine",
+      fix_hairline=True,
+    )
 
     #time.sleep(2)
     
@@ -588,15 +588,15 @@ def answer():
     # driver.find_element(By.XPATH, '//html/body/div[16]/form[1]/button').click()
     #  # noCss = 'document.querySelectorAll(\'style,link[rel=\"stylesheet\"]\').forEach(item => item.remove());
     # # noCss = 'nodeList = document.querySelectorAll("*");\nfor (let i = 0; i < nodeList.length; i++){\n  blow = nodeList[i].style; blow.setProperty(\'text-transform\',\'lowercase\');\n}'
-    selfDie = 'lins = document.querySelectorAll(\'a\')\nvalues = []\nfor (i = 0; i < lins.length; i++) {\n  avalue = lins[i]\nif (avalue.className.includes(\'survey\')) {\n  avalue.setAttribute(\'target\', \'_self\')\n}\n}'
-    driver.execute_script(selfDie)
+    # selfDie = 'lins = document.querySelectorAll(\'a\')\nvalues = []\nfor (i = 0; i < lins.length; i++) {\n  avalue = lins[i]\nif (avalue.className.includes(\'survey\')) {\n  avalue.setAttribute(\'target\', \'_self\')\n}\n}'
+    # driver.execute_script(selfDie)
 
 
     html = driver.page_source
     soup_object = soup(html, features="html.parser")
     #allLinks = soup_object.find_all('a', attrs={'class' : re.compile(r'survey|Survey')})
     #allLinks = ['https://spectrumsurveys.com/#/start-survey?211=111&212=22,311&213=82500&214=113&215=114&216=114&217=113&218=112&219=111&220=111&223=3&224=5&225=51&228=153&229=20111&230=&231=511&244=112&245=112&1010=112&1031=113,111,112,114,115,117&1032=118&1033=144&1034=116&1036=181&1037=112,114&1039=126,126,120&1040=112&1044=114&1045=111&1051=115&1055=134,129,135,133,137,116,116&1062=111&1096=112,113,114&1101=117&1233=117&1246=119,135&1499=112&1735=118&1809=113&1956=111&survey_id=9498994&supplier_id=79&type=1&pid=8061428&externalSystemUserId=4871b861-49cd-b7bc-f5b0-7eaa97d3d39e&uuid=313d973e2fb611edb76c02b393b2fb33']
-    allLinks = ['file:///Users/joshuabarnett/Desktop/Something/starightdiv.html']
+    allLinks = ['file:///Users/joshuabarnett/Desktop/Something/thetest/ascdvda.html']
     trying = 0
 
     go = True
@@ -611,14 +611,13 @@ def answer():
         go = True
         #geterdone = trySurveyLink(i)
         trying = 0
+        driver.get(i)
         while go and trying <= 5:
             if backHome(driver.current_url):
                 geterdone = False
             try:
-                driver.get(i)
                 geterdone = True
                 if geterdone:
-                    trying += 1
                     print(driver.current_url)
                     if url != driver.current_url:
                         url = driver.current_url
@@ -638,7 +637,9 @@ def answer():
                         questionClasses = []
                         questionNames = []
                         inputs_update = []
+                        allOptions = {}
                         mainAttract = None
+                        headerTag = []
                         completedQuestions = []
                         answersToQuestions = None
                         question_container = None
@@ -653,150 +654,160 @@ def answer():
                         questionIds = question_container.find_all('div', attrs={'id' : re.compile(r'question|Question')}) + question_container.find_all('span', attrs={'id' : re.compile(r'question|Question')})
                         questionClasses = question_container.find_all('div', attrs={'class' : re.compile(r'question|Question')}) + question_container.find_all('span', attrs={'class' : re.compile(r'question|Question')})
                         questionNames = question_container.find_all('div', attrs={'name' : re.compile(r'question|Question')}) + question_container.find_all('span', attrs={'name' : re.compile(r'question|Question')})
+                        tup = []
+                        for key,tag in allOptions.items():
+                            for i in tag:
+                                tup.append((i.sourceline, i.sourcepos, i))
+                        tup.sort(key=lambda y: y[0])
                         headerTag = question_container.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
                         questionArray = set(questionClasses + questionIds + questionNames + headerTag)
                         if len(questionArray) == 0:
                             questionArray = question_container.find_all('div')
                         questionArray = removeChildren(list(questionArray))
-                        mainAttract = getNumberOfQuestion(allOptions, questionArray, next_page)
+                        mainAttract = getNumberOfQuestion({'only_inputs': only_inputs}, questionArray, next_page)
                         mult = 'reg'
-                        for key,quest in mainAttract.items():
+                        knownParents = []
+                        for key,quest in allOptions.items():
 
                             if key == 'selection':
-                                for parent, child in quest['questions'].items():
-                                    answersToQuestions = getBasics(parent)
+                                for child in quest:
+                                    answersToQuestions, parent = findSenpai(child)
+                                    if parent not in knownParents: knownParents.append(parent.sourceline)
                                     checkSelect = False
                                     if len(answersToQuestions) == 0:
                                         checkSelect = True
                                     workingKey = None
                                     inputs_update = []
-                                    for i in range(len(child)):
-                                        if checkSelect:
-                                            answersToQuestions = getBasics([child[i]])
-                                        currentPageSource = driver.page_source
-                                        currentValue = checkWithPage(currentPageSource, child[i], 'select')
-                                        child[i] = currentValue
-                                        correctKey = None
-                                        try:    
-                                            listOfOptions = child[i].find_all('option')
-                                            if len(listOfOptions) > 1:
-                                                if len(answersToQuestions) == 0: 
+                                    if checkSelect:
+                                        answersToQuestions = getBasics([child])
+                                    currentPageSource = driver.page_source
+                                    currentValue = checkWithPage(currentPageSource, child, 'select')
+                                    child = currentValue
+                                    correctKey = None
+                                    try:    
+                                        listOfOptions = child.find_all('option')
+                                        if len(listOfOptions) > 1:
+                                            if len(answersToQuestions) == 0: 
+                                                answer = getOptions(listOfOptions, len(listOfOptions))
+                                                tryClickingSelect(child, answer)
+                                                time.sleep(0.5)
+                                                if workingKey != False:
+                                                    workingKey = True
+                                            else:
+                                                answer = answerOfBasics(child, answersToQuestions, child.findChildren())
+                                                time.sleep(0.5)
+                                                if workingKey != False:
+                                                    workingKey = True
+                                                if answer == None:
                                                     answer = getOptions(listOfOptions, len(listOfOptions))
-                                                    tryClickingSelect(child[i], answer)
+                                                    clickAll(child, [answer])
                                                     time.sleep(0.5)
                                                     if workingKey != False:
                                                         workingKey = True
-                                                else:
-                                                    answer = answerOfBasics(child[i], answersToQuestions, child[i].findChildren())
-                                                    time.sleep(0.5)
-                                                    if workingKey != False:
-                                                        workingKey = True
-                                                    if answer == None:
-                                                        answer = getOptions(listOfOptions, len(listOfOptions))
-                                                        clickAll(selection[i], [answer])
-                                                        time.sleep(0.5)
-                                                        if workingKey != False:
-                                                            workingKey = True
-                                        except Exception as e:
-                                            print(e)
-                                            pass
-                                if workingKey:
-                                    completedQuestions += quest['questions']
+                                    except Exception as e:
+                                        print(e)
+                                        pass
 
                             if key == 'listElements' and len([x for x in completedQuestions if x in quest['questions']]) == 0:
-                                for parent, child in quest['questions'].items():
-                                    answersToQuestions = getBasics(parent)
+                                for child in quest:
+                                    answersToQuestions, parent = findSenpai(child)
+                                    if parent not in knownParents: knownParents.append(parent)
                                     workingKey = None
                                     inputs_update = []
-                                    for i in range(len(child)):
-                                        liInputs = child[i].find_all('li')
-                                        # if len(liInputs) == 0:
-                                        #     liInputs = [x.find('a') for x in listElements[i].find_all('li') if x.find('a') != None]
-                                        # if len(liInputs) == 0:
-                                        #     break
-                                        try:
-                                            if mult == 'mult':
-                                                for i in range(int(len(liInputs)/2)):
-                                                    answer = getOptions(liInputs, len(liInputs))
-                                                    sender = [answer] + answer.findChildren()
-                                                    clickAll(answer, sender)
-                                                    time.sleep(0.5)
-                                                    if workingKey != False:
-                                                        workingKey = True
+                                    currentPageSource = driver.page_source
+                                    currentValue = checkWithPage(currentPageSource, child, 'ul')
+                                    child = currentValue
+                                    liInputs = child.find_all('li')
+                                    # if len(liInputs) == 0:
+                                    #     liInputs = [x.find('a') for x in listElements[i].find_all('li') if x.find('a') != None]
+                                    # if len(liInputs) == 0:
+                                    #     break
+                                    try:
+                                        if mult == 'mult':
+                                            for i in range(int(len(liInputs)/2)):
+                                                answer = getOptions(liInputs, len(liInputs))
+                                                sender = [answer] + answer.findChildren()
+                                                clickAll(answer, sender)
+                                                time.sleep(0.5)
+                                                if workingKey != False:
+                                                    workingKey = True
+                                        else:
+                                            if len(answersToQuestions) == 0: 
+                                                answer = getOptions(liInputs, len(liInputs))
+                                                sender = [answer] + answer.findChildren()
+                                                clickAll(answer, sender)
+                                                time.sleep(0.5)
+                                                if workingKey != False:
+                                                    workingKey = True
                                             else:
-                                                if len(answersToQuestions) == 0: 
+                                                answer = answerOfBasics(child, answersToQuestions, child.findChildren())
+                                                if answer == None:
                                                     answer = getOptions(liInputs, len(liInputs))
                                                     sender = [answer] + answer.findChildren()
                                                     clickAll(answer, sender)
                                                     time.sleep(0.5)
                                                     if workingKey != False:
                                                         workingKey = True
-                                                else:
-                                                    answer = answerOfBasics(child[i], answersToQuestions, child[i].findChildren())
-                                                    if answer == None:
-                                                        answer = getOptions(liInputs, len(liInputs))
-                                                        sender = [answer] + answer.findChildren()
-                                                        clickAll(answer, sender)
-                                                        time.sleep(0.5)
-                                                        if workingKey != False:
-                                                            workingKey = True
-                                        except Exception as e:
-                                            print(e)
-                                            pass
+                                    except Exception as e:
+                                        print(e)
+                                        pass
 
                             if key == 'tables' and len([x for x in completedQuestions if x in quest['questions']]) == 0:
-                                for parent,child in quest['questions'].items():
-                                    answersToQuestions = getBasics(parent)
+                                for child in quest:
+                                    answersToQuestions, parent = findSenpai(child)
+                                    if parent not in knownParents: knownParents.append(parent)
                                     workingKey = None
                                     inputs_update = []
-                                    for i in range(len(child)):
-                                        try:
-                                            inputs_update = []
-                                            tableRowData = child[i].find_all('tr')
-                                            for x in tableRowData:
-                                                tableData = x.find_all('td')
-                                                if len(tableData) > 0:
-                                                    if mult == 'mult':
-                                                        for i in range(int(len(tableData)/2)):
-                                                            if len(answersToQuestions) == 0:
-                                                                answer = answerOfBasics(child[i], answersToQuestions, child[i].findChildren())
-                                                                if answer == None:
-                                                                    answer = getOptions(tableData, len(tableData))
-                                                                    sender = [answer] + answer.findChildren()
-                                                                    clickAll(answer, sender)
-                                                                    time.sleep(0.5)
-                                                            else:
-                                                                answer = getOptions(tableData, len(tableData)) 
-                                                                sender = [answer] + answer.findChildren()
-                                                                clickAll(answer, sender)
-                                                                time.sleep(0.5)
-                                                    else:
-                                                        if len(answersToQuestions) == 0: 
-                                                            answer = getOptions(tableData, len(tableData))
-                                                            sender = [answer] + answer.findChildren()
-                                                            clickAll(answer, sender)
-                                                            time.sleep(0.5)
-                                                            if workingKey != False:
-                                                                workingKey = True
-                                                        else:
-                                                            answer = answerOfBasics(child[i], answersToQuestions, child[i].findChildren())
+                                    currentPageSource = driver.page_source
+                                    currentValue = checkWithPage(currentPageSource, child, 'table')
+                                    child = currentValue
+                                    try:
+                                        inputs_update = []
+                                        tableRowData = child.find_all('tr')
+                                        for x in tableRowData:
+                                            tableData = x.find_all('td')
+                                            if len(tableData) > 0:
+                                                if mult == 'mult':
+                                                    for i in range(int(len(tableData)/2)):
+                                                        if len(answersToQuestions) == 0:
+                                                            answer = answerOfBasics(child, answersToQuestions, child.findChildren())
                                                             if answer == None:
                                                                 answer = getOptions(tableData, len(tableData))
                                                                 sender = [answer] + answer.findChildren()
                                                                 clickAll(answer, sender)
                                                                 time.sleep(0.5)
-                                        except Exception as e:
-                                            print(e)
-                                            pass
+                                                        else:
+                                                            answer = getOptions(tableData, len(tableData)) 
+                                                            sender = [answer] + answer.findChildren()
+                                                            clickAll(answer, sender)
+                                                            time.sleep(0.5)
+                                                else:
+                                                    if len(answersToQuestions) == 0: 
+                                                        answer = getOptions(tableData, len(tableData))
+                                                        sender = [answer] + answer.findChildren()
+                                                        clickAll(answer, sender)
+                                                        time.sleep(0.5)
+                                                        if workingKey != False:
+                                                            workingKey = True
+                                                    else:
+                                                        answer = answerOfBasics(child, answersToQuestions, child.findChildren())
+                                                        if answer == None:
+                                                            answer = getOptions(tableData, len(tableData))
+                                                            sender = [answer] + answer.findChildren()
+                                                            clickAll(answer, sender)
+                                                            time.sleep(0.5)
+                                    except Exception as e:
+                                        print(e)
+                                        pass
 
                             if key == 'only_inputs' and len([x for x in completedQuestions if x in quest['questions']]) == 0:
                                 workingKey = None
                                 inputs_update = []
-                                for parent,child in quest['questions'].items():
+                                for parent,child in mainAttract['only_inputs']['questions'].items():
                                     inputs_update = []
                                     try:
                                         if len(parent) > 0:
-                                            answersToQuestions = getBasics(parent)
+                                            answersToQuestions = getBasics([parent[0]])
                                             only_inputs = child
                                             for x in range(len(only_inputs)):
                                                 if only_inputs[x].attrs['type'].lower() == 'radio' or only_inputs[x].attrs['type'].lower() == 'checkbox':
@@ -861,13 +872,13 @@ def answer():
                                         pass
 
                             if key == 'textarea' and len([x for x in completedQuestions if x in quest['questions']]) == 0:
-                                for parent,child in quest['questions'].items():
-                                    answersToQuestions = getBasics(parent)
+                                for child in quest:
+                                    answersToQuestions = getBasics([parent])
                                     if len(answersToQuestions) == 0:
                                         answersToQuestions = getBasics(questionArray)
                                     workingKey = None
                                     for i in range(len(child)):
-                                        populateInput(child[i], answersToQuestions)
+                                        populateInput(child, answersToQuestions)
 
                         currentPageSource = driver.page_source
 

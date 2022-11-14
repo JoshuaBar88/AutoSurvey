@@ -10,4 +10,5 @@ for i in jo:
 if len([x for x in jo if x in bo]) == 0:
     print('yeah')
 
-print(go==lo)
+matta = [0,8]
+print(matta + [9])
