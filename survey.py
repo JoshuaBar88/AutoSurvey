@@ -71,17 +71,20 @@ def getBasics(tag):
 def answerOfBasics(element, types, children):
     parent = element
     childOfParent = children
-    if type(list(types)[0]) == str:
-        try:
-            listOfElements = textInChildren(parent, childOfParent, types)
-            if listOfElements:
-                return True
-        except Exception as e:
-            pass
+    types = list(types)
+    if types[0] == str:
+        for i in types:
+            if i in parent.text.lower():
+                try:
+                    listOfElements = textInChildren(parent, childOfParent, i)
+                    if listOfElements:
+                        return True
+                except Exception as e:
+                    pass
     else:
         for j in types:
             try:
-                if j[0] in element.text.lower(): 
+                if j[0] in parent.text.lower(): 
                     for x in range(1,len(j)):
                         try:
                             if j[x] in element.text.lower():
@@ -92,7 +95,7 @@ def answerOfBasics(element, types, children):
                             pass
             except Exception as e:
                 pass
-    return None
+    return False
 def answerOfOptions(elements, types, parentFrom, child):
     parent = parentFrom
     childOfParent = child
@@ -138,11 +141,7 @@ def textInChildren(parent, elements, key):
     for i in sorted:
         go = re.sub('[^A-Za-z0-9]+', '', i.getText().lower())
         if go in key:
-            if i.name == 'span':
-                value = i.findPreviousSibling()
-                goodBoys.append(value)
-            else:
-                goodBoys.append(i)
+            goodBoys.append(i)
     return clickAll(parent, goodBoys)
 
 def getQuestionType(quest, type):
